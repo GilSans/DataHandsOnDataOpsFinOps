@@ -1,6 +1,6 @@
 resource "aws_db_parameter_group" "postgres" {
   family = "postgres17"
-  name   = "${var.environment}-postgres-pg"
+  name   = "${var.environment}-postgres-pg-rds"
 }
 
 resource "aws_db_subnet_group" "postgres" {
