@@ -58,7 +58,7 @@ module "ec2_instance" {
   instance_type       = "t3a.2xlarge"
   subnet_id           = module.vpc_public.public_subnet_ids[0]
   vpc_id              = module.vpc_public.vpc_id
-  key_name            = "cjmm-datahandson-cb"
+  key_name            = "cjmm-mds-dq"
   associate_public_ip = true
   instance_name       = "data-handson-mds-ec2-${var.environment}"
 
