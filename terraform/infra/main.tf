@@ -32,6 +32,24 @@ module "rds_postgres" {
   allocated_storage = 50
 }
 
+###############################################################################
+#########             REDSHIFT                                    #############
+###############################################################################
+module "redshift" {
+  source = "./modules/redshift"
+
+  cluster_identifier  = "data-handson-mds"
+  database_name       = "datahandsonmds"
+  master_username     = "admin"
+  node_type           = "ra3.large"
+  cluster_type        = "single-node"
+  number_of_nodes     = 1
+  publicly_accessible = true
+  subnet_ids          = module.vpc_public.public_subnet_ids
+  vpc_id              = module.vpc_public.vpc_id
+  allowed_ips         = ["0.0.0.0/0"]
+}
+
 
 
 ##############################################################################
@@ -88,6 +106,12 @@ module "ec2_instance" {
       to_port     = 3000
       protocol    = "tcp"
       cidr_blocks = ["0.0.0.0/0"]
+    },
+    {
+      from_port   = 8080
+      to_port     = 8080
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
     }
   ]
 }
@@ -96,44 +120,44 @@ module "ec2_instance" {
 ###############################################################################
 #########            DMS SERVERLESS                             #############
 ###############################################################################
-module "dms_serverless" {
-  source = "./modules/dms-serverless"
+# module "dms_serverless" {
+#   source = "./modules/dms-serverless"
 
-  environment                 = var.environment
-  vpc_id                      = module.vpc_public.vpc_id
-  subnet_ids                  = module.vpc_public.private_subnet_ids
-  replication_subnet_group_id = module.vpc_public.dms_subnet_group_id
+#   environment                 = var.environment
+#   vpc_id                      = module.vpc_public.vpc_id
+#   subnet_ids                  = module.vpc_public.private_subnet_ids
+#   replication_subnet_group_id = module.vpc_public.dms_subnet_group_id
 
-  source_endpoint_config = {
-    endpoint_id   = "postgres-source-${var.environment}"
-    engine_name   = "postgres"
-    server_name   = module.rds_postgres.db_instance_endpoint
-    port          = module.rds_postgres.db_instance_port
-    database_name = module.rds_postgres.db_name
-    username      = "postgres"
-    password      = var.rds_password
-  }
+#   source_endpoint_config = {
+#     endpoint_id   = "postgres-source-${var.environment}"
+#     engine_name   = "postgres"
+#     server_name   = module.rds_postgres.db_instance_endpoint
+#     port          = module.rds_postgres.db_instance_port
+#     database_name = module.rds_postgres.db_name
+#     username      = "postgres"
+#     password      = var.rds_password
+#   }
 
-  target_s3_config = {
-    bucket_name   = var.s3_bucket_raw
-    bucket_folder = "raw/postgres/"
-  }
+#   target_s3_config = {
+#     bucket_name   = var.s3_bucket_raw
+#     bucket_folder = "raw/postgres/"
+#   }
 
-  table_mappings = jsonencode({
-    "rules" = [
-      {
-        "rule-type" = "selection"
-        "rule-id"   = "1"
-        "rule-name" = "1"
-        "object-locator" = {
-          "schema-name" = "public"
-          "table-name"  = "%"
-        }
-        "rule-action" = "include"
-      }
-    ]
-  })
-}
+#   table_mappings = jsonencode({
+#     "rules" = [
+#       {
+#         "rule-type" = "selection"
+#         "rule-id"   = "1"
+#         "rule-name" = "1"
+#         "object-locator" = {
+#           "schema-name" = "public"
+#           "table-name"  = "%"
+#         }
+#         "rule-action" = "include"
+#       }
+#     ]
+#   })
+# }
 
 ###############################################################################
 #########            GLUE JOBS                                   #############
@@ -227,6 +251,22 @@ resource "aws_s3_object" "metabase_docker_compose" {
   etag   = filemd5("../../metabase/docker-compose.yml")
 }
 
+###############################################################################
+#########            AIRFLOW INFRA FILES UPLOAD                  #############
+###############################################################################
+locals {
+  airflow_infra_files = fileset("../../airflow/infra", "**/*")
+}
+
+resource "aws_s3_object" "airflow_infra_files" {
+  for_each = { for file in local.airflow_infra_files : file => file if !endswith(file, "/") }
+
+  bucket = var.s3_bucket_scripts
+  key    = "airflow/infra/${each.value}"
+  source = "../../airflow/infra/${each.value}"
+  etag   = filemd5("../../airflow/infra/${each.value}")
+}
+
 
 ###############################################################################
 #########            LAMBDA FUNCTION WITH DOCKER                  #############
@@ -252,4 +292,102 @@ module "lambda_function_duckdb" {
   environment_variables = {
     ENV_VAR_1 = "value1"
   }
+}
+
+
+###############################################################################
+#########            SNS TOPICS                                  #############
+###############################################################################
+module "sns_data_quality_alerts" {
+  source = "./modules/sns"
+
+  project_name = "data-handson-dq"
+  environment  = var.environment
+  topic_name   = "data-handson-dq-alerts"
+  display_name = "Data Quality Alerts"
+
+  # Allow all accounts in your organization to publish to this topic
+  publisher_principals = ["*"]
+}
+
+
+##############################################################################
+#########            LAMBDA FUNCTIONS                            #############
+###############################################################################
+module "lambda_alert_dataquality" {
+  source = "./modules/lambda"
+
+  project_name     = "data-handson-dq"
+  environment      = var.environment
+  function_name    = "alert-dataquality-sqs-discord"
+  description      = "Lambda function to send data quality alerts from SNS to Discord"
+  handler          = "alert-dataquality-sqs-discord.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 60
+  memory_size      = 128
+  source_code_file = "alert-dataquality-sqs-discord.py"
+
+  environment_variables = {
+    DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1354503644946628769/bjvMnt1ZpcsMTt67nAe_vFwK6A1yVq6p0sUNRxNJNK1TJz8Gd4WgSxCAQHRToCf1itIj"
+  }
+}
+
+# SNS subscription for alert Lambda
+resource "aws_sns_topic_subscription" "lambda_alert_subscription" {
+  topic_arn = module.sns_data_quality_alerts.sns_topic_arn
+  protocol  = "lambda"
+  endpoint  = module.lambda_alert_dataquality.lambda_function_arn
+}
+
+# Permission for SNS to invoke alert Lambda
+resource "aws_lambda_permission" "sns_invoke_alert" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_alert_dataquality.lambda_function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = module.sns_data_quality_alerts.sns_topic_arn
+}
+
+module "lambda_glue_dq_error_handler" {
+  source = "./modules/lambda"
+
+  project_name     = "data-handson-dq"
+  environment      = var.environment
+  function_name    = "glue-dq-error-handler"
+  description      = "Lambda function to handle Glue Data Quality error events"
+  handler          = "glue-dq-error-handler.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 900
+  memory_size      = 128
+  source_code_file = "glue-dq-error-handler.py"
+
+  environment_variables = {
+    SNS_TOPIC_ARN = module.sns_data_quality_alerts.sns_topic_arn
+  }
+
+  # Add permissions to publish to SNS
+  additional_policy_arns = ["arn:aws:iam::aws:policy/AmazonSNSFullAccess"]
+}
+
+###############################################################################
+#########            EVENTBRIDGE RULES                           #############
+###############################################################################
+module "eventbridge_glue_dq_errors" {
+  source = "./modules/eventbridge"
+
+  project_name = "data-handson-dq"
+  environment  = var.environment
+  rule_name    = "glue-dq-errors"
+  description  = "Capture Glue Data Quality error events"
+
+  event_pattern = jsonencode({
+    source      = ["aws.glue-dataquality"]
+    detail-type = ["Data Quality Evaluation Results Available"]
+    detail = {
+      state = ["FAILED"]
+    }
+  })
+
+  target_lambda_arn  = module.lambda_glue_dq_error_handler.lambda_function_arn
+  target_lambda_name = module.lambda_glue_dq_error_handler.lambda_function_name
 }

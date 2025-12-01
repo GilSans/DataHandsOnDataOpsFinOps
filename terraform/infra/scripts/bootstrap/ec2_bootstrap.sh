@@ -40,16 +40,39 @@ chmod +x /usr/local/bin/docker-compose
 # Instala AWS CLI
 apt-get install -y awscli
 
-# Cria diretório para Metabase
+# Cria diretórios para Metabase e Airflow
 mkdir -p /opt/metabase
-cd /opt/metabase
+mkdir -p /opt/airflow
 
 # Baixa docker-compose do Metabase do S3
+cd /opt/metabase
 aws s3 cp s3://cjmm-mds-lake-configs/metabase/docker-compose.yml .
 
+# Baixa arquivos do Airflow do S3
+cd /opt/airflow
+aws s3 sync s3://cjmm-mds-lake-configs/airflow/infra/ .
+
+# Cria diretórios do Airflow
+mkdir -p dags logs plugins config
+
+# Copia DAG de sync para pasta dags
+cp dag_sync.py dags/
+
+# Define permissões
+chown -R ubuntu:ubuntu /opt/metabase /opt/airflow
+
 # Inicia Metabase
+cd /opt/metabase
+docker-compose up -d
+
+# Aguarda um pouco antes de iniciar o Airflow
+sleep 10
+
+# Inicia Airflow
+cd /opt/airflow
 docker-compose up -d
 
 # Configura para iniciar automaticamente no boot
 echo "cd /opt/metabase && docker-compose up -d" >> /etc/rc.local
+echo "cd /opt/airflow && docker-compose up -d" >> /etc/rc.local
 chmod +x /etc/rc.local
