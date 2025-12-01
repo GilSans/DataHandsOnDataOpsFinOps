@@ -154,7 +154,7 @@ jobs:
           echo "Files in terraform/infra:"
           ls -la terraform/infra/ || echo "terraform/infra not found"
           echo "Files in terraform/infra/envs:"
-          ls -la terraform/infra/envs/ || echo "terraform/infra/envs not found"
+          ls -la envs/ || echo "terraform/infra/envs not found"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
