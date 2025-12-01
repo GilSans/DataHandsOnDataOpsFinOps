@@ -97,7 +97,7 @@ resource "aws_dms_replication_task" "main" {
   source_endpoint_arn      = aws_dms_endpoint.source.endpoint_arn
   target_endpoint_arn      = aws_dms_endpoint.target.endpoint_arn
   replication_instance_arn = aws_dms_replication_instance.main.replication_instance_arn
-  migration_type           = "full-load-and-cdc"
+  migration_type           = "full-load"
   table_mappings           = var.table_mappings
 
   tags = {
