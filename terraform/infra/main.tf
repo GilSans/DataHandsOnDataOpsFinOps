@@ -37,9 +37,24 @@ module "rds_postgres" {
 ##############################################################################
 ########             INSTANCIAS EC2                              #############
 ##############################################################################
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 module "ec2_instance" {
   source              = "./modules/ec2"
-  ami_id              = "ami-04b4f1a9cf54c11d0"
+  ami_id              = data.aws_ami.ubuntu.id
   instance_type       = "t3a.2xlarge"
   subnet_id           = module.vpc_public.public_subnet_ids[0]
   vpc_id              = module.vpc_public.vpc_id
