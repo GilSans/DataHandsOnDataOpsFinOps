@@ -58,7 +58,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -backend-config=backends/${{ env.ENV }}.hcl
+        run: terraform init -upgrade -backend-config=backends/${{ env.ENV }}.hcl
 
       - name: Cache Terraform
         uses: actions/cache@v4
@@ -130,7 +130,7 @@ jobs:
 
       - name: Terraform Init (restore state)
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
+        run: terraform init -upgrade -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
 
       - name: Terraform validate
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -184,7 +184,7 @@ jobs:
 
       - name: Terraform Init (restore state)
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
+        run: terraform init -upgrade -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
 
       - name: Terraform plan
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -242,7 +242,7 @@ jobs:
 
       - name: Terraform Init (restore state)
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
+        run: terraform init -upgrade -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
 
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
