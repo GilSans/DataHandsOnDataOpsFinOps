@@ -177,18 +177,16 @@ jobs:
           key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
 
       - name: Terraform Init (restore state)
-        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
 
       - name: Terraform plan
-        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform plan -input=false -out=tfplan -var-file=envs/${{ needs.terraform-init.outputs.environment }}.tfvars
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ needs.terraform-init.outputs.environment }}
-          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          path: tfplan
           retention-days: 5
 
   # Job 5: Terraform Apply
