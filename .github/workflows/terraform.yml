@@ -72,9 +72,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform-files-${{ env.ENV }}
-          path: |
-            ${{ env.TF_WORKING_DIR }}
-            !${{ env.TF_WORKING_DIR }}/.terraform
+          path: ${{ env.TF_WORKING_DIR }}
           retention-days: 1
 
   # Job 2: Terraform Format Check
@@ -105,6 +103,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-files-${{ needs.terraform-init.outputs.environment }}
+          path: .
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -144,6 +143,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-files-${{ needs.terraform-init.outputs.environment }}
+          path: .
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -192,6 +192,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-files-${{ needs.terraform-init.outputs.environment }}
+          path: .
 
       - name: Download plan artifact
         uses: actions/download-artifact@v4
