@@ -99,11 +99,14 @@ jobs:
     needs: terraform-init
 
     steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
       - name: Download Terraform files
         uses: actions/download-artifact@v4
         with:
           name: terraform-files-${{ needs.terraform-init.outputs.environment }}
-          path: .
+          path: ${{ env.TF_WORKING_DIR }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -139,11 +142,14 @@ jobs:
     needs: [terraform-init, terraform-fmt, terraform-validate]
 
     steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
       - name: Download Terraform files
         uses: actions/download-artifact@v4
         with:
           name: terraform-files-${{ needs.terraform-init.outputs.environment }}
-          path: .
+          path: ${{ env.TF_WORKING_DIR }}
 
       - name: Debug - List files
         run: |
@@ -177,16 +183,18 @@ jobs:
           key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
 
       - name: Terraform Init (restore state)
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
 
       - name: Terraform plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform plan -input=false -out=tfplan -var-file=envs/${{ needs.terraform-init.outputs.environment }}.tfvars
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ needs.terraform-init.outputs.environment }}
-          path: tfplan
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
           retention-days: 5
 
   # Job 5: Terraform Apply
@@ -197,11 +205,14 @@ jobs:
     environment: ${{ needs.terraform-init.outputs.environment }}
 
     steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
       - name: Download Terraform files
         uses: actions/download-artifact@v4
         with:
           name: terraform-files-${{ needs.terraform-init.outputs.environment }}
-          path: .
+          path: ${{ env.TF_WORKING_DIR }}
 
       - name: Download plan artifact
         uses: actions/download-artifact@v4
