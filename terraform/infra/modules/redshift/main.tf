@@ -10,7 +10,7 @@ resource "random_password" "redshift_password" {
 
 # Criando um segredo no AWS Secrets Manager
 resource "aws_secretsmanager_secret" "redshift_secret" {
-  name = "${var.cluster_identifier}-redshift-credentials-new"
+  name = "${var.cluster_identifier}-redshift-credentials-new-new"
 }
 
 # Armazenando a senha gerada no Secrets Manager
