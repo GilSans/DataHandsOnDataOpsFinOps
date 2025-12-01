@@ -83,6 +83,7 @@ resource "aws_dms_endpoint" "target" {
     compression_type        = "GZIP"
     data_format             = "parquet"
     service_access_role_arn = aws_iam_role.dms_access_for_endpoint.arn
+    timestamp_column_name   = null
   }
 
   tags = {
