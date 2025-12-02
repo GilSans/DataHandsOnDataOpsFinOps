@@ -58,9 +58,9 @@ aws s3 cp s3://cjmm-mds-lake-configs/metabase/docker-compose.yml .
 cd /opt/airflow
 aws s3 sync s3://cjmm-mds-lake-configs/airflow/infra/ .
 
-# Substitui AWS_ACCOUNT_ID no arquivo de configuração do Airflow
+# Substitui AWS_ACCOUNT_ID no arquivo .env
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID}"
-sed -i "s/\${AWS_ACCOUNT_ID}/$AWS_ACCOUNT_ID/g" config/airflow.cfg
+sed -i "s/\${AWS_ACCOUNT_ID}/$AWS_ACCOUNT_ID/g" .env
 echo "Airflow configurado para usar CloudWatch logs"
 
 # Cria diretórios do Airflow (config já existe)
