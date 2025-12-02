@@ -40,6 +40,24 @@ chmod +x /usr/local/bin/docker-compose
 # Instala AWS CLI
 apt-get install -y awscli
 
+# Instala e configura CloudWatch agent
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+dpkg -i -E ./amazon-cloudwatch-agent.deb
+
+# Configura Docker daemon para usar CloudWatch logs driver
+cat > /etc/docker/daemon.json << 'EOF'
+{
+  "log-driver": "awslogs",
+  "log-opts": {
+    "awslogs-region": "us-east-2",
+    "awslogs-create-group": "true"
+  }
+}
+EOF
+
+# Reinicia Docker para aplicar configurações
+systemctl restart docker
+
 # Cria diretórios para Metabase e Airflow
 mkdir -p /opt/metabase
 mkdir -p /opt/airflow
@@ -52,6 +70,12 @@ aws s3 cp s3://cjmm-mds-lake-configs/metabase/docker-compose.yml .
 cd /opt/airflow
 aws s3 sync s3://cjmm-mds-lake-configs/airflow/infra/ .
 
+# Baixa configuração do CloudWatch agent
+cp cloudwatch-config.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+
+# Inicia CloudWatch agent
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+
 # Cria diretórios do Airflow
 mkdir -p dags logs plugins config
 
@@ -60,6 +84,9 @@ cp dag_sync.py dags/
 
 # Define permissões
 chown -R ubuntu:ubuntu /opt/metabase /opt/airflow
+
+# Configura variáveis de ambiente para AWS
+echo 'export AWS_DEFAULT_REGION=us-east-2' >> /home/ubuntu/.bashrc
 
 # Inicia Metabase
 cd /opt/metabase

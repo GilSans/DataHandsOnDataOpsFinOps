@@ -1,5 +1,5 @@
 from airflow.decorators import dag
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.operators.python import PythonVirtualenvOperator
 from airflow.operators.python import PythonOperator
 from airflow.utils.context import Context
@@ -24,8 +24,8 @@ CONNECTION_ID = "redshift_default"
 DB_NAME = "amazonsales"
 SCHEMA_NAME = "public"
 
-# ROOT_PATH = "/opt/airflow/dags"
-ROOT_PATH = "/usr/local/airflow/dags" #MWAA
+ROOT_PATH = "/opt/airflow/dags"
+#ROOT_PATH = "/usr/local/airflow/dags" #MWAA
 DBT_PROJECT_PATH = f"{ROOT_PATH}/dbt/sales_dw_dbt_tests_with_gx"
 
 profile_config = ProfileConfig(
@@ -46,7 +46,7 @@ execution_config = ExecutionConfig(
 @dag(start_date=datetime(2025, 4, 1), schedule=None, catchup=False)
 def dag_dbt_tests_sales_dw_cosmos_with_gx():
 
-    start_process = DummyOperator(task_id="start_process")
+    start_process = EmptyOperator(task_id="start_process")
 
     transform_data = DbtTaskGroup(
         group_id="transform_data",

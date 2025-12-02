@@ -17,3 +17,8 @@ output "security_group_id" {
   description = "ID of the created Security Group"
   value       = aws_security_group.this.id
 }
+
+output "cloudwatch_log_group_name" {
+  description = "Name of the CloudWatch log group for Airflow"
+  value       = aws_cloudwatch_log_group.airflow_logs.name
+}

@@ -80,6 +80,12 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
+  logging:
+    driver: awslogs
+    options:
+      awslogs-region: ${AWS_DEFAULT_REGION:-us-east-2}
+      awslogs-group: /aws/ec2/airflow/data-handson-mds-ec2-dev
+      awslogs-create-group: "true"
   depends_on:
     &airflow-common-depends-on
     redis:

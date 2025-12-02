@@ -256,6 +256,7 @@ resource "aws_s3_object" "metabase_docker_compose" {
 ###############################################################################
 locals {
   airflow_infra_files = fileset("../../airflow/infra", "**/*")
+  bootstrap_files     = fileset("scripts/bootstrap", "**/*")
 }
 
 resource "aws_s3_object" "airflow_infra_files" {
@@ -265,6 +266,15 @@ resource "aws_s3_object" "airflow_infra_files" {
   key    = "airflow/infra/${each.value}"
   source = "../../airflow/infra/${each.value}"
   etag   = filemd5("../../airflow/infra/${each.value}")
+}
+
+resource "aws_s3_object" "bootstrap_files" {
+  for_each = { for file in local.bootstrap_files : file => file if !endswith(file, "/") }
+
+  bucket = var.s3_bucket_scripts
+  key    = "scripts/bootstrap/${each.value}"
+  source = "scripts/bootstrap/${each.value}"
+  etag   = filemd5("scripts/bootstrap/${each.value}")
 }
 
 
