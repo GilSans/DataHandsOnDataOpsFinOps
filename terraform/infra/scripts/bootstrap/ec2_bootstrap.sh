@@ -44,9 +44,7 @@ chmod +x /usr/local/bin/docker-compose
 # Instala AWS CLI
 apt-get install -y awscli
 
-# Account ID passado via Terraform
-AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID}"
-echo "AWS Account ID: $AWS_ACCOUNT_ID"
+
 
 # Cria diretórios para Metabase e Airflow
 mkdir -p /opt/metabase
@@ -60,9 +58,7 @@ aws s3 cp s3://cjmm-mds-lake-configs/metabase/docker-compose.yml .
 cd /opt/airflow
 aws s3 sync s3://cjmm-mds-lake-configs/airflow/infra/ .
 
-# Substitui AWS_ACCOUNT_ID no arquivo de configuração do Airflow
-sed -i "s/\${AWS_ACCOUNT_ID}/$AWS_ACCOUNT_ID/g" config/airflow.cfg
-echo "Airflow configurado para usar CloudWatch logs"
+echo "Airflow configurado para usar logs locais"
 
 # Cria diretórios do Airflow (config já existe)
 mkdir -p dags logs plugins

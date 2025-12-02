@@ -80,9 +80,7 @@ module "ec2_instance" {
   associate_public_ip = true
   instance_name       = "data-handson-mds-ec2-${var.environment}"
 
-  user_data = templatefile("${path.module}/scripts/bootstrap/ec2_bootstrap.sh", {
-    AWS_ACCOUNT_ID = data.aws_caller_identity.current.account_id
-  })
+  user_data = templatefile("${path.module}/scripts/bootstrap/ec2_bootstrap.sh", {})
 
   ingress_rules = [
     {
