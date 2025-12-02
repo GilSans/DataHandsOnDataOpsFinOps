@@ -26,17 +26,21 @@ def lambda_handler(event, context):
     for record in event['Records']:
         # O SNS envia mensagens como string, então precisamos converter para JSON
         sns_message = json.loads(record['Sns']['Message'])
+        required_keys = {"origem", "pipeline", "validacao", "detalhes"}
 
-        # Extraindo dados da mensagem
-        origem = sns_message.get('origem', 'Desconhecido')
-        pipeline = sns_message.get('pipeline', 'Desconhecido')
-        validacao = sns_message.get('validacao', 'Desconhecido')
-        detalhes = sns_message.get('detalhes', 'Desconhecido')
+        if isinstance(sns_message, dict) and required_keys.issubset(sns_message.keys()):
+            # Extraindo dados da mensagem
+            origem = sns_message.get('origem', 'Desconhecido')
+            pipeline = sns_message.get('pipeline', 'Desconhecido')
+            validacao = sns_message.get('validacao', 'Desconhecido')
+            detalhes = sns_message.get('detalhes', 'Desconhecido')
 
-        # Montando a mensagem para o Discord
-        discord_message = f"📢 **Data Quality Alert**:\n**Origem**: {origem}\n**Pipeline**: {pipeline}\n**Validação**: {validacao}\n**Detalhes**: {detalhes}"
+            # Montando a mensagem para o Discord
+            discord_message = f"📢 **Data Quality Alert**:\n**Origem**: {origem}\n**Pipeline**: {pipeline}\n**Validação**: {validacao}\n**Detalhes**: {detalhes}"
+        else:
+            discord_message = f"📢 **Infra Alert**:\n{sns_message}"
 
-        # Enviar a mensagem ao Discord
+        #enviar a mensagem ao Discord
         send_to_discord(discord_message)
 
         print(f"📨 Processado e registrado no Discord: {record['Sns']['MessageId']}")
