@@ -20,4 +20,4 @@ USER airflow
 COPY ./requirements.txt /opt/airflow/requirements.txt
 RUN pip install --no-cache-dir -r /opt/airflow/requirements.txt
 
-RUN pip install --no-cache-dir apache-airflow-providers-fab
+RUN pip install --no-cache-dir apache-airflow-providers-fab apache-airflow-providers-amazon[cloudwatch] boto3
