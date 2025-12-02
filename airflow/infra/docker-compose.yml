@@ -83,7 +83,7 @@ x-airflow-common:
   logging:
     driver: awslogs
     options:
-      awslogs-region: ${AWS_DEFAULT_REGION:-us-east-2}
+      awslogs-region: us-east-2
       awslogs-group: /aws/ec2/airflow/data-handson-mds-ec2-dev
       awslogs-create-group: "true"
   depends_on:

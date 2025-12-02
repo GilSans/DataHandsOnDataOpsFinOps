@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Log de debug
+exec > >(tee /var/log/user-data.log) 2>&1
+echo "Iniciando bootstrap em $(date)"
+
 # Atualiza pacotes
 apt-get update -y
 apt-get upgrade -y
@@ -40,10 +44,6 @@ chmod +x /usr/local/bin/docker-compose
 # Instala AWS CLI
 apt-get install -y awscli
 
-# Instala e configura CloudWatch agent
-wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
-dpkg -i -E ./amazon-cloudwatch-agent.deb
-
 # Configura Docker daemon para usar CloudWatch logs driver
 cat > /etc/docker/daemon.json << 'EOF'
 {
@@ -70,11 +70,7 @@ aws s3 cp s3://cjmm-mds-lake-configs/metabase/docker-compose.yml .
 cd /opt/airflow
 aws s3 sync s3://cjmm-mds-lake-configs/airflow/infra/ .
 
-# Baixa configuração do CloudWatch agent
-cp cloudwatch-config.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-
-# Inicia CloudWatch agent
-/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+echo "Docker configurado para usar CloudWatch logs"
 
 # Cria diretórios do Airflow
 mkdir -p dags logs plugins config
@@ -103,3 +99,5 @@ docker-compose up -d
 echo "cd /opt/metabase && docker-compose up -d" >> /etc/rc.local
 echo "cd /opt/airflow && docker-compose up -d" >> /etc/rc.local
 chmod +x /etc/rc.local
+
+echo "Bootstrap concluído em $(date)"
