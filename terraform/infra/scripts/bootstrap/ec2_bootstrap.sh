@@ -44,8 +44,8 @@ chmod +x /usr/local/bin/docker-compose
 # Instala AWS CLI
 apt-get install -y awscli
 
-# Obtém Account ID para configuração do Airflow
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+# Account ID passado via Terraform
+AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID}"
 echo "AWS Account ID: $AWS_ACCOUNT_ID"
 
 # Cria diretórios para Metabase e Airflow
