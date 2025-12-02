@@ -38,6 +38,27 @@ resource "aws_iam_role_policy" "s3_access" {
   })
 }
 
+resource "aws_iam_role_policy" "cloudwatch_logs" {
+  name = "${var.instance_name}-cloudwatch-logs"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "${var.instance_name}-profile"
   role = aws_iam_role.ec2_role.name
@@ -65,6 +86,12 @@ resource "aws_security_group" "this" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+# CloudWatch Log Group para Airflow
+resource "aws_cloudwatch_log_group" "airflow_logs" {
+  name              = "/aws/ec2/airflow/${var.instance_name}"
+  retention_in_days = 30
 }
 
 # EC2 Instance
