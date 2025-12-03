@@ -64,15 +64,3 @@ variable "logging_level" {
   type        = string
   default     = "ALL"
 }
-
-variable "sns_topic_arns" {
-  description = "Mapa de ARNs de tópicos SNS por nome da state machine"
-  type        = map(string)
-  default     = {}
-}
-
-variable "ec2_ips" {
-  description = "Mapa de IPs EC2 por nome da state machine"
-  type        = map(string)
-  default     = {}
-}

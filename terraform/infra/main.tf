@@ -218,10 +218,6 @@ module "step_functions" {
       definition_file = "sfn_definition_s3tables_amazonsales.json"
       type            = "STANDARD"
     }
-    "datahandson-dataopsfinops-airflow-health-check" = {
-      definition_file = "sfn_definition_airflow_health_check.json"
-      type            = "STANDARD"
-    }
   }
 
   # Permissões adicionais para o Step Functions
@@ -247,16 +243,6 @@ module "step_functions" {
 
   # Anexar políticas gerenciadas
   attach_glue_policy = true
-
-  # Mapa de ARNs SNS
-  sns_topic_arns = {
-    "datahandson-dataopsfinops-airflow-health-check" = module.sns_data_quality_alerts.sns_topic_arn
-  }
-
-  # Mapa de IPs EC2
-  ec2_ips = {
-    "datahandson-dataopsfinops-airflow-health-check" = module.ec2_instance.public_ip
-  }
 
   # Configurações de logging
   log_retention_days     = 30
