@@ -219,7 +219,7 @@ module "step_functions" {
       type            = "STANDARD"
     }
     "datahandson-dataopsfinops-airflow-health-check" = {
-      definition_file = "sfn_airflow_health_check.json"
+      definition_file = "sfn_definition_airflow_health_check.json"
       type            = "STANDARD"
     }
   }
