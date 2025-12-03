@@ -71,14 +71,20 @@ locals {
       replace(
         replace(
           replace(
-            data.local_file.step_functions_definition[name].content,
-            "{{account_id}}", data.aws_caller_identity.current.account_id
+            replace(
+              replace(
+                data.local_file.step_functions_definition[name].content,
+                "{{account_id}}", data.aws_caller_identity.current.account_id
+              ),
+              "{{region}}", var.region
+            ),
+            "{{project_name}}", var.project_name
           ),
-          "{{region}}", var.region
+          "{{environment}}", var.environment
         ),
-        "{{project_name}}", var.project_name
+        "{{sns_topic_arn}}", lookup(var.sns_topic_arns, name, "")
       ),
-      "{{environment}}", var.environment
+      "{{ec2_ip}}", lookup(var.ec2_ips, name, "")
     )
   }
 }
