@@ -85,7 +85,7 @@ resource "aws_sfn_state_machine" "state_machine" {
 # Criar grupo de logs para o Step Functions
 resource "aws_cloudwatch_log_group" "step_functions_log_group" {
   for_each          = var.state_machines
-  name              = "/aws/states/${var.project_name}-${each.key}"
+  name              = "/aws/states/${var.project_name}-${each.key}-new"
   retention_in_days = var.log_retention_days
 
 }
