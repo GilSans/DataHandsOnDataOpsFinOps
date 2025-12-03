@@ -1,0 +1,59 @@
+{
+  "Comment": "Airflow health check using Step Functions",
+  "StartAt": "CheckAirflowHealth",
+  "States": {
+    "CheckAirflowHealth": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::http:invoke",
+      "Parameters": {
+        "Method": "GET",
+        "Url": "http://{{ec2_ip}}:8080/health"
+      },
+      "Next": "EvaluateHealth"
+    },
+    "EvaluateHealth": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.ResponseBody.metadatabase.status",
+          "StringNotEquals": "healthy",
+          "Next": "SendAlert"
+        },
+        {
+          "Variable": "$.ResponseBody.scheduler.status",
+          "StringNotEquals": "healthy",
+          "Next": "SendAlert"
+        },
+        {
+          "Variable": "$.ResponseBody.triggerer.status",
+          "StringNotEquals": "healthy",
+          "Next": "SendAlert"
+        },
+        {
+          "Variable": "$.ResponseBody.dag_processor.status",
+          "StringNotEquals": "healthy",
+          "Next": "SendAlert"
+        }
+      ],
+      "Default": "Healthy"
+    },
+    "SendAlert": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+      "Parameters": {
+        "TopicArn": "{{sns_topic_arn}}",
+        "Message": "ALERTA: Airflow está UNHEALTHY!",
+        "Subject": "Airflow Health Check Failed"
+      },
+      "Next": "Done"
+    },
+    "Healthy": {
+      "Type": "Pass",
+      "Result": "Airflow healthy",
+      "Next": "Done"
+    },
+    "Done": {
+      "Type": "Succeed"
+    }
+  }
+}
