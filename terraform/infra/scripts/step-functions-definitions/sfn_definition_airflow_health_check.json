@@ -12,33 +12,51 @@
         "Body.$": "$.Payload"
       },
       "ResultPath": "$.Health",
-      "Next": "EvaluateHealth"
+      "Next": "CheckMetaDatabase"
     },
-    "EvaluateHealth": {
+    "CheckMetaDatabase": {
       "Type": "Choice",
       "Choices": [
         {
           "Variable": "$.Health.Body.metadatabase.status",
-          "StringNotEquals": "healthy",
-          "Next": "SetFailureMessageMeta"
-        },
-        {
-          "Variable": "$.Health.Body.scheduler.status",
-          "StringNotEquals": "healthy",
-          "Next": "SetFailureMessageScheduler"
-        },
-        {
-          "Variable": "$.Health.Body.triggerer.status",
-          "StringNotEquals": "healthy",
-          "Next": "SetFailureMessageTriggerer"
-        },
-        {
-          "Variable": "$.Health.Body.dag_processor.status",
-          "StringNotEquals": "healthy",
-          "Next": "SetFailureMessageDagProcessor"
+          "StringEquals": "healthy",
+          "Next": "CheckScheduler"
         }
       ],
-      "Default": "Healthy"
+      "Default": "SetFailureMessageMeta"
+    },
+    "CheckScheduler": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Body.scheduler.status",
+          "StringEquals": "healthy",
+          "Next": "CheckTriggerer"
+        }
+      ],
+      "Default": "SetFailureMessageScheduler"
+    },
+    "CheckTriggerer": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Body.triggerer.status",
+          "StringEquals": "healthy",
+          "Next": "CheckDagProcessor"
+        }
+      ],
+      "Default": "SetFailureMessageTriggerer"
+    },
+    "CheckDagProcessor": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Body.dag_processor.status",
+          "StringEquals": "healthy",
+          "Next": "Healthy"
+        }
+      ],
+      "Default": "SetFailureMessageDagProcessor"
     },
     "SetFailureMessageMeta": {
       "Type": "Pass",
