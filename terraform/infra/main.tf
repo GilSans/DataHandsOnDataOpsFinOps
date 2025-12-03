@@ -218,6 +218,10 @@ module "step_functions" {
       definition_file = "sfn_definition_s3tables_amazonsales.json"
       type            = "STANDARD"
     }
+    "airflow-health-check" = {
+      definition_file = "sfn_definition_airflow_health_check.json"
+      type            = "STANDARD"
+    }
   }
 
   # Permissões adicionais para o Step Functions
@@ -231,6 +235,13 @@ module "step_functions" {
         "glue:BatchStopJobRun"
       ]
       Resource = "*"
+    },
+    {
+      Effect = "Allow"
+      Action = [
+        "lambda:InvokeFunction"
+      ]
+      Resource = module.lambda_airflow_health_check.lambda_function_arn
     },
     {
       Effect = "Allow"
@@ -478,36 +489,4 @@ module "lambda_airflow_health_check" {
     AIRFLOW_HOST = "ec2-13-58-137-11.us-east-2.compute.amazonaws.com"
     AIRFLOW_PORT = "8080"
   }
-}
-
-module "step_functions_airflow_health" {
-  source = "./modules/step-functions"
-
-  project_name = "datahandson-dataopsfinops"
-  environment  = var.environment
-  region       = var.region
-
-  state_machines = {
-    "airflow-health-check" = {
-      definition_file = "sfn_definition_airflow_health_check.json"
-      type            = "STANDARD"
-    }
-  }
-
-  additional_iam_statements = [
-    {
-      Effect = "Allow"
-      Action = [
-        "lambda:InvokeFunction"
-      ]
-      Resource = module.lambda_airflow_health_check.lambda_function_arn
-    },
-    {
-      Effect = "Allow"
-      Action = [
-        "sns:Publish"
-      ]
-      Resource = module.sns_data_quality_alerts.sns_topic_arn
-    }
-  ]
 }
