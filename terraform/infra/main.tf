@@ -241,7 +241,7 @@ module "step_functions" {
       Action = [
         "lambda:InvokeFunction"
       ]
-      Resource = module.lambda_airflow_health_check.lambda_function_arn
+      Resource = "arn:aws:lambda:us-east-2:296735965303:function:airflow-health-check-lambda"
     },
     {
       Effect = "Allow"
