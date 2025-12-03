@@ -64,37 +64,14 @@ data "local_file" "step_functions_definition" {
   filename = "${var.definitions_path}/${each.value.definition_file}"
 }
 
-# Substituir variáveis na definição do Step Functions
-locals {
-  state_machine_definitions = {
-    for name, config in var.state_machines : name => replace(
-      replace(
-        replace(
-          replace(
-            replace(
-              replace(
-                data.local_file.step_functions_definition[name].content,
-                "{{account_id}}", data.aws_caller_identity.current.account_id
-              ),
-              "{{region}}", var.region
-            ),
-            "{{project_name}}", var.project_name
-          ),
-          "{{environment}}", var.environment
-        ),
-        "{{sns_topic_arn}}", lookup(var.sns_topic_arns, name, "")
-      ),
-      "{{ec2_ip}}", lookup(var.ec2_ips, name, "")
-    )
-  }
-}
+
 
 # Criar o Step Functions State Machine
 resource "aws_sfn_state_machine" "state_machine" {
   for_each   = var.state_machines
   name       = each.key
   role_arn   = aws_iam_role.step_functions_role.arn
-  definition = local.state_machine_definitions[each.key]
+  definition = data.local_file.step_functions_definition[each.key].content
   type       = each.value.type
 
   logging_configuration {
