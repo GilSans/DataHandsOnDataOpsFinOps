@@ -208,9 +208,10 @@ module "glue_jobs_dataopsfinops_s3tables" {
 module "step_functions" {
   source = "./modules/step-functions"
 
-  project_name = "datahandson-dataopsfinops"
-  environment  = var.environment
-  region       = var.region
+  project_name     = "datahandson-dataopsfinops"
+  environment      = var.environment
+  region           = var.region
+  definitions_path = "${path.module}/scripts/step-functions-definitions"
 
   # Definições das máquinas de estado
   state_machines = {
