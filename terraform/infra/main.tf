@@ -410,3 +410,104 @@ module "eventbridge_glue_dq_errors" {
   target_lambda_arn  = module.lambda_glue_dq_error_handler.lambda_function_arn
   target_lambda_name = module.lambda_glue_dq_error_handler.lambda_function_name
 }
+
+resource "aws_cloudwatch_event_rule" "ec2_state_change" {
+  name        = "ec2-stopped-terminated-${var.environment}"
+  description = "Capture EC2 instance state changes (stopped/terminated)"
+
+  event_pattern = jsonencode({
+    source      = ["aws.ec2"]
+    detail-type = ["EC2 Instance State-change Notification"]
+    detail = {
+      state = ["stopped", "terminated"]
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "sns_ec2_alerts" {
+  rule      = aws_cloudwatch_event_rule.ec2_state_change.name
+  target_id = "SendToSNS"
+  arn       = module.sns_data_quality_alerts.sns_topic_arn
+
+  input_transformer {
+    input_paths = {
+      instance_id = "$.detail.instance-id"
+      state       = "$.detail.state"
+      region      = "$.region"
+      time        = "$.time"
+    }
+    input_template = "\"EC2 Instance Alert: Instance <instance_id> in region <region> has changed to state <state> at <time>\""
+  }
+}
+
+resource "aws_sns_topic_policy" "ec2_alerts_policy" {
+  arn = module.sns_data_quality_alerts.sns_topic_arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action   = "sns:Publish"
+        Resource = module.sns_data_quality_alerts.sns_topic_arn
+      }
+    ]
+  })
+}
+
+###############################################################################
+#########            AIRFLOW HEALTH CHECK                        #############
+###############################################################################
+module "lambda_airflow_health_check" {
+  source = "./modules/lambda"
+
+  project_name     = "data-handson-dq"
+  environment      = var.environment
+  function_name    = "airflow-health-check-lambda"
+  description      = "Lambda function to check Airflow health status"
+  handler          = "airflow-health-check.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 30
+  memory_size      = 128
+  source_code_file = "airflow-health-check.py"
+
+  environment_variables = {
+    AIRFLOW_HOST = "ec2-13-58-137-11.us-east-2.compute.amazonaws.com"
+    AIRFLOW_PORT = "8080"
+  }
+}
+
+module "step_functions_airflow_health" {
+  source = "./modules/step-functions"
+
+  project_name = "datahandson-dataopsfinops"
+  environment  = var.environment
+  region       = var.region
+
+  state_machines = {
+    "airflow-health-check" = {
+      definition_file = "sfn_airflow_health_check.json"
+      type            = "STANDARD"
+    }
+  }
+
+  additional_iam_statements = [
+    {
+      Effect = "Allow"
+      Action = [
+        "lambda:InvokeFunction"
+      ]
+      Resource = module.lambda_airflow_health_check.lambda_function_arn
+    },
+    {
+      Effect = "Allow"
+      Action = [
+        "sns:Publish"
+      ]
+      Resource = module.sns_data_quality_alerts.sns_topic_arn
+    }
+  ]
+}
