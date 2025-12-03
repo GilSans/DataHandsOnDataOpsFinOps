@@ -1,0 +1,86 @@
+{
+  "Comment": "Airflow health check using Step Functions (via Lambda)",
+  "StartAt": "InvokeLambda",
+  "States": {
+    "InvokeLambda": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "airflow-health-check-lambda"
+      },
+      "ResultSelector": {
+        "Body.$": "$.Payload"
+      },
+      "ResultPath": "$.Health",
+      "Next": "EvaluateHealth"
+    },
+    "EvaluateHealth": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Body.metadatabase.status",
+          "StringNotEquals": "healthy",
+          "Next": "SetFailureMessageMeta"
+        },
+        {
+          "Variable": "$.Health.Body.scheduler.status",
+          "StringNotEquals": "healthy",
+          "Next": "SetFailureMessageScheduler"
+        },
+        {
+          "Variable": "$.Health.Body.triggerer.status",
+          "StringNotEquals": "healthy",
+          "Next": "SetFailureMessageTriggerer"
+        },
+        {
+          "Variable": "$.Health.Body.dag_processor.status",
+          "StringNotEquals": "healthy",
+          "Next": "SetFailureMessageDagProcessor"
+        }
+      ],
+      "Default": "Healthy"
+    },
+    "SetFailureMessageMeta": {
+      "Type": "Pass",
+      "Result": "Airflow metadatabase is UNHEALTHY!",
+      "ResultPath": "$.FailReason",
+      "Next": "SendAlert"
+    },
+    "SetFailureMessageScheduler": {
+      "Type": "Pass",
+      "Result": "Airflow scheduler is UNHEALTHY!",
+      "ResultPath": "$.FailReason",
+      "Next": "SendAlert"
+    },
+    "SetFailureMessageTriggerer": {
+      "Type": "Pass",
+      "Result": "Airflow triggerer is UNHEALTHY!",
+      "ResultPath": "$.FailReason",
+      "Next": "SendAlert"
+    },
+    "SetFailureMessageDagProcessor": {
+      "Type": "Pass",
+      "Result": "Airflow dag_processor is UNHEALTHY!",
+      "ResultPath": "$.FailReason",
+      "Next": "SendAlert"
+    },
+    "SendAlert": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-2:296735965303:data-handson-dq-alerts-dev",
+        "Message.$": "$.FailReason",
+        "Subject": "Airflow Health Check Failed"
+      },
+      "Next": "Done"
+    },
+    "Healthy": {
+      "Type": "Pass",
+      "Result": "Airflow healthy",
+      "Next": "Done"
+    },
+    "Done": {
+      "Type": "Succeed"
+    }
+  }
+}

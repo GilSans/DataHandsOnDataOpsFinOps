@@ -489,7 +489,7 @@ module "step_functions_airflow_health" {
 
   state_machines = {
     "airflow-health-check" = {
-      definition_file = "sfn_airflow_health_check.json"
+      definition_file = "sfn_definition_airflow_health_check.json"
       type            = "STANDARD"
     }
   }
