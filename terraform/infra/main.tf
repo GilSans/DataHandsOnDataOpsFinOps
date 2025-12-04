@@ -483,7 +483,7 @@ module "lambda_airflow_health_check" {
   runtime          = "python3.9"
   timeout          = 30
   memory_size      = 128
-  source_code_file = "airflow-health-check.py"
+  source_code_file = "airflow-health-check-lambda.py"
 
   environment_variables = {
     AIRFLOW_HOST = "ec2-13-58-137-11.us-east-2.compute.amazonaws.com"
