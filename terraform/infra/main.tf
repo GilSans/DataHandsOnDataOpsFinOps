@@ -479,7 +479,7 @@ module "lambda_airflow_health_check" {
   environment      = var.environment
   function_name    = "airflow-health-check-lambda"
   description      = "Lambda function to check Airflow health status"
-  handler          = "airflow-health-check.lambda_handler"
+  handler          = "airflow-health-check-lambda.lambda_handler"
   runtime          = "python3.9"
   timeout          = 30
   memory_size      = 128
