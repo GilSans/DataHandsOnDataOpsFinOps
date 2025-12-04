@@ -24,8 +24,14 @@ def send_to_discord(message):
 def lambda_handler(event, context):
     """Função Lambda para processar mensagens do SNS e enviá-las ao Discord."""
     for record in event['Records']:
+        print(record)
+        raw_message = record['Sns']['Message']
         # O SNS envia mensagens como string, então precisamos converter para JSON
-        sns_message = json.loads(record['Sns']['Message'])
+        try:
+            sns_message = json.loads(raw_message)
+        except json.JSONDecodeError:
+            sns_message = raw_message  # mantém como string
+
         required_keys = {"origem", "pipeline", "validacao", "detalhes"}
 
         if isinstance(sns_message, dict) and required_keys.issubset(sns_message.keys()):
@@ -40,7 +46,7 @@ def lambda_handler(event, context):
         else:
             discord_message = f"📢 **Infra Alert**:\n{sns_message}"
 
-        #enviar a mensagem ao Discord
+        # Enviar a mensagem ao Discord
         send_to_discord(discord_message)
 
         print(f"📨 Processado e registrado no Discord: {record['Sns']['MessageId']}")
