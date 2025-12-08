@@ -30,6 +30,6 @@ resource "aws_servicecatalogappregistry_attribute_group" "main" {
 }
 
 resource "aws_servicecatalogappregistry_attribute_group_association" "main" {
-  application     = aws_servicecatalogappregistry_application.main.id
-  attribute_group = aws_servicecatalogappregistry_attribute_group.main.id
+  application_id     = aws_servicecatalogappregistry_application.main.id
+  attribute_group_id = aws_servicecatalogappregistry_attribute_group.main.id
 }
