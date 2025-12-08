@@ -277,6 +277,7 @@ resource "aws_s3_object" "metabase_docker_compose" {
 locals {
   airflow_infra_files = fileset("../../airflow/infra", "**/*")
   bootstrap_files     = fileset("scripts/bootstrap", "**/*")
+  emr_scripts         = fileset("../../airflow/dags/scripts", "**/*")
 }
 
 resource "aws_s3_object" "airflow_infra_files" {
@@ -489,4 +490,38 @@ module "lambda_airflow_health_check" {
     AIRFLOW_HOST = "ec2-13-58-137-11.us-east-2.compute.amazonaws.com"
     AIRFLOW_PORT = "8080"
   }
+}
+
+###############################################################################
+#########            EMR SERVERLESS                              #############
+###############################################################################
+module "emr_serverless" {
+  source = "./modules/emr-serverless"
+
+  project_name = "data-handson-mds"
+  environment  = var.environment
+  s3_bucket    = var.s3_bucket_raw
+
+  release_label = "emr-7.0.0"
+
+  driver_cpu    = "2 vCPU"
+  driver_memory = "4 GB"
+
+  executor_count  = 2
+  executor_cpu    = "4 vCPU"
+  executor_memory = "8 GB"
+
+  max_cpu    = "20 vCPU"
+  max_memory = "40 GB"
+
+  idle_timeout_minutes = 5
+}
+
+resource "aws_s3_object" "emr_scripts" {
+  for_each = { for file in local.emr_scripts : file => file if !endswith(file, "/") }
+
+  bucket = var.s3_bucket_scripts
+  key    = "scripts/emr/${each.value}"
+  source = "../../airflow/dags/scripts/${each.value}"
+  etag   = filemd5("../../airflow/dags/scripts/${each.value}")
 }

@@ -24,7 +24,7 @@ dag = DAG(
 sync_bash_task = BashOperator(
     task_id='sync_dags_bash',
     bash_command='''
-    aws s3 sync s3://cjmm-mds-lake-configs/airflow/dags/ /opt/airflow/dags/ --delete
+    aws s3 sync s3://cjmm-mds-lake-configs/airflow/dags/ /opt/airflow/dags/
     chown -R 50000:0 /opt/airflow/dags
     chmod -R 755 /opt/airflow/dags
     echo "DAGs sincronizadas com sucesso"
