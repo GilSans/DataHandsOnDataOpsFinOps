@@ -525,3 +525,17 @@ resource "aws_s3_object" "emr_scripts" {
   source = "../../airflow/dags/scripts/${each.value}"
   etag   = filemd5("../../airflow/dags/scripts/${each.value}")
 }
+
+###############################################################################
+#########            AWS APPLICATION                             #############
+###############################################################################
+module "aws_application" {
+  source = "./modules/aws-application"
+
+  application_name = "data-handson-dataops-finops"
+  description      = "DataOps and FinOps Training Application - Data Lake Architecture"
+  environment      = var.environment
+  project_name     = "data-handson-mds"
+  owner            = "DataOps Team"
+  cost_center      = "DataEngineering"
+}

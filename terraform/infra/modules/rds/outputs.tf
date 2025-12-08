@@ -22,3 +22,8 @@ output "security_group_id" {
   description = "Security group ID"
   value       = aws_security_group.postgres.id
 }
+
+output "db_instance_arn" {
+  description = "RDS instance ARN"
+  value       = aws_db_instance.postgres.arn
+}

@@ -22,3 +22,8 @@ output "cloudwatch_log_group_name" {
   description = "Name of the CloudWatch log group for Airflow"
   value       = aws_cloudwatch_log_group.airflow_logs.name
 }
+
+output "instance_arn" {
+  description = "ARN of the EC2 instance"
+  value       = aws_instance.this.arn
+}
