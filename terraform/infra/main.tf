@@ -423,6 +423,59 @@ module "eventbridge_glue_dq_errors" {
   target_lambda_name = module.lambda_glue_dq_error_handler.lambda_function_name
 }
 
+########## Lambda
+resource "aws_cloudwatch_event_rule" "ec2_stop_schedule" {
+  name                = "ec2-stop-schedule-${var.environment}"
+  description         = "Stop EC2 instance at 6 PM BRT (9 PM UTC)"
+  schedule_expression = "cron(0 21 * * ? *)"
+  is_enabled          = false
+}
+
+resource "aws_cloudwatch_event_target" "ec2_stop_target" {
+  rule      = aws_cloudwatch_event_rule.ec2_stop_schedule.name
+  target_id = "StopEC2Instance"
+  arn       = module.lambda_ec2_scheduler.lambda_function_arn
+
+  input = jsonencode({
+    instance_id = module.ec2_instance.instance_id
+    action      = "stop"
+  })
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_stop" {
+  statement_id  = "AllowExecutionFromEventBridgeStop"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_ec2_scheduler.lambda_function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.ec2_stop_schedule.arn
+}
+
+resource "aws_cloudwatch_event_rule" "ec2_start_schedule" {
+  name                = "ec2-start-schedule-${var.environment}"
+  description         = "Start EC2 instance at 8 AM BRT (11 AM UTC)"
+  schedule_expression = "cron(0 11 * * ? *)"
+  is_enabled          = false
+}
+
+resource "aws_cloudwatch_event_target" "ec2_start_target" {
+  rule      = aws_cloudwatch_event_rule.ec2_start_schedule.name
+  target_id = "StartEC2Instance"
+  arn       = module.lambda_ec2_scheduler.lambda_function_arn
+
+  input = jsonencode({
+    instance_id = module.ec2_instance.instance_id
+    action      = "start"
+  })
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_start" {
+  statement_id  = "AllowExecutionFromEventBridgeStart"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_ec2_scheduler.lambda_function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.ec2_start_schedule.arn
+}
+
 resource "aws_cloudwatch_event_rule" "ec2_state_change" {
   name        = "ec2-stopped-terminated-${var.environment}"
   description = "Capture EC2 instance state changes (stopped/terminated)"
@@ -490,6 +543,29 @@ module "lambda_airflow_health_check" {
     AIRFLOW_HOST = "ec2-13-58-137-11.us-east-2.compute.amazonaws.com"
     AIRFLOW_PORT = "8080"
   }
+}
+
+###############################################################################
+#########            EC2 SCHEDULER                               #############
+###############################################################################
+module "lambda_ec2_scheduler" {
+  source = "./modules/lambda"
+
+  project_name     = "data-handson-mds"
+  environment      = var.environment
+  function_name    = "ec2-start-shutdown-ec2-scheduler"
+  description      = "Lambda to start/stop EC2 instances on schedule"
+  handler          = "ec2-start-shutdown-ec2-scheduler.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 60
+  memory_size      = 128
+  source_code_file = "ec2-start-shutdown-ec2-scheduler.py"
+
+  environment_variables = {
+    INSTANCE_ID = module.ec2_instance.instance_id
+  }
+
+  additional_policy_arns = ["arn:aws:iam::aws:policy/AmazonEC2FullAccess"]
 }
 
 ###############################################################################
