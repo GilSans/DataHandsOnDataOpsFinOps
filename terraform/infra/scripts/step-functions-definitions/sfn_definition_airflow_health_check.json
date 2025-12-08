@@ -1,0 +1,149 @@
+{
+  "Comment": "Airflow Health Check - All independent and safe checks",
+  "StartAt": "InvokeLambda",
+  "States": {
+    "InvokeLambda": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-2:296735965303:function:data-handson-dq-airflow-health-check-lambda:$LATEST"
+      },
+      "ResultSelector": {
+        "Payload.$": "$.Payload"
+      },
+      "ResultPath": "$.Health",
+      "Next": "CheckMetaDatabasePresent"
+    },
+    "CheckMetaDatabasePresent": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Payload.metadatabase.status",
+          "IsPresent": true,
+          "Next": "CheckMetaDatabaseHealthy"
+        }
+      ],
+      "Default": "SendMetaDatabaseFailure"
+    },
+    "CheckMetaDatabaseHealthy": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Payload.metadatabase.status",
+          "StringEquals": "healthy",
+          "Next": "CheckSchedulerPresent"
+        }
+      ],
+      "Default": "SendMetaDatabaseFailure"
+    },
+    "SendMetaDatabaseFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-2:296735965303:data-handson-dq-alerts-dev",
+        "Message": "Airflow metadatabase is UNHEALTHY",
+        "Subject": "Airflow Health Check Failed"
+      },
+      "Next": "CheckSchedulerPresent"
+    },
+    "CheckSchedulerPresent": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Payload.scheduler.status",
+          "IsPresent": true,
+          "Next": "CheckSchedulerHealthy"
+        }
+      ],
+      "Default": "SendSchedulerFailure"
+    },
+    "CheckSchedulerHealthy": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Payload.scheduler.status",
+          "StringEquals": "healthy",
+          "Next": "CheckTriggererPresent"
+        }
+      ],
+      "Default": "SendSchedulerFailure"
+    },
+    "SendSchedulerFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-2:296735965303:data-handson-dq-alerts-dev",
+        "Message": "Airflow scheduler is UNHEALTHY",
+        "Subject": "Airflow Health Check Failed"
+      },
+      "Next": "CheckTriggererPresent"
+    },
+    "CheckTriggererPresent": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Payload.triggerer.status",
+          "IsPresent": true,
+          "Next": "CheckTriggererHealthy"
+        }
+      ],
+      "Default": "SendTriggererFailure"
+    },
+    "CheckTriggererHealthy": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Payload.triggerer.status",
+          "StringEquals": "healthy",
+          "Next": "CheckDagProcessorPresent"
+        }
+      ],
+      "Default": "SendTriggererFailure"
+    },
+    "SendTriggererFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-2:296735965303:data-handson-dq-alerts-dev",
+        "Message": "Airflow triggerer is UNHEALTHY",
+        "Subject": "Airflow Health Check Failed"
+      },
+      "Next": "CheckDagProcessorPresent"
+    },
+    "CheckDagProcessorPresent": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Payload.dag_processor.status",
+          "IsPresent": true,
+          "Next": "CheckDagProcessorHealthy"
+        }
+      ],
+      "Default": "SendDagProcessorFailure"
+    },
+    "CheckDagProcessorHealthy": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Health.Payload.dag_processor.status",
+          "StringEquals": "healthy",
+          "Next": "AllDone"
+        }
+      ],
+      "Default": "SendDagProcessorFailure"
+    },
+    "SendDagProcessorFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-2:296735965303:data-handson-dq-alerts-dev",
+        "Message": "Airflow dag_processor is UNHEALTHY",
+        "Subject": "Airflow Health Check Failed"
+      },
+      "Next": "AllDone"
+    },
+    "AllDone": {
+      "Type": "Succeed"
+    }
+  }
+}

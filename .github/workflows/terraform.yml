@@ -1,0 +1,295 @@
+name: Terraform CI/CD
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+
+env:
+  TF_VERSION: "1.9.5"
+  TF_WORKING_DIR: terraform/infra
+  AWS_REGION: "us-east-2"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Job 1: Airflow Unit Tests
+  airflow-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          cd airflow/tests
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          cd airflow/tests
+          python -m pytest test_dags.py -v
+
+  # Job 2: Terraform Init
+  terraform-init:
+    runs-on: ubuntu-latest
+    needs: airflow-tests
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar ENV
+        id: set-env
+        run: |
+          if [[ "${{ github.base_ref }}" == "develop" ]] || [[ "${{ github.ref_name }}" == "develop" ]]; then
+            echo "ENV=dev" >> $GITHUB_ENV
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.base_ref }}" == "main" ]] || [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "ENV=prod" >> $GITHUB_ENV
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "ENV=dev" >> $GITHUB_ENV
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -upgrade -backend-config=backends/${{ env.ENV }}.hcl
+
+      - name: Cache Terraform
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.TF_WORKING_DIR }}/.terraform
+            ${{ env.TF_WORKING_DIR }}/.terraform.lock.hcl
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+
+      - name: Upload Terraform files
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-files-${{ env.ENV }}
+          path: ${{ env.TF_WORKING_DIR }}
+          retention-days: 1
+
+  # Job 2: Terraform Format Check
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    needs: terraform-init
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform fmt
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+  # Job 3: Terraform Validate
+  terraform-validate:
+    runs-on: ubuntu-latest
+    needs: terraform-init
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Download Terraform files
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-files-${{ needs.terraform-init.outputs.environment }}
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Restore Terraform Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.TF_WORKING_DIR }}/.terraform
+            ${{ env.TF_WORKING_DIR }}/.terraform.lock.hcl
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+
+      - name: Terraform Init (restore state)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -upgrade -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
+
+      - name: Terraform validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+  # Job 4: Terraform Plan
+  terraform-plan:
+    runs-on: ubuntu-latest
+    needs: [terraform-init, terraform-fmt, terraform-validate]
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Download Terraform files
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-files-${{ needs.terraform-init.outputs.environment }}
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Debug - List files
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in current directory:"
+          ls -la
+          echo "Files in terraform/infra:"
+          ls -la terraform/infra/ || echo "terraform/infra not found"
+          echo "Files in terraform/infra/envs:"
+          ls -la envs/ || echo "terraform/infra/envs not found"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Restore Terraform Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.TF_WORKING_DIR }}/.terraform
+            ${{ env.TF_WORKING_DIR }}/.terraform.lock.hcl
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+
+      - name: Terraform Init (restore state)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -upgrade -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
+
+      - name: Terraform plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan -input=false -out=tfplan -var-file=envs/${{ needs.terraform-init.outputs.environment }}.tfvars
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ needs.terraform-init.outputs.environment }}
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          retention-days: 5
+
+  # Job 5: Terraform Apply
+  terraform-apply:
+    runs-on: ubuntu-latest
+    needs: [terraform-init, terraform-plan]
+    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop')
+    environment: ${{ needs.terraform-init.outputs.environment }}
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Download Terraform files
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-files-${{ needs.terraform-init.outputs.environment }}
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ needs.terraform-init.outputs.environment }}
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Restore Terraform Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.TF_WORKING_DIR }}/.terraform
+            ${{ env.TF_WORKING_DIR }}/.terraform.lock.hcl
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+
+      - name: Terraform Init (restore state)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -upgrade -backend-config=backends/${{ needs.terraform-init.outputs.environment }}.hcl
+
+      - name: Terraform apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -input=false -auto-approve tfplan
+
+  # Job 6: Upload Airflow DAGs
+  upload-airflow-dags:
+    runs-on: ubuntu-latest
+    needs: [terraform-init, terraform-apply]
+    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop')
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload Airflow DAGs to S3
+        run: |
+          aws s3 sync airflow/dags/ s3://cjmm-mds-lake-configs/airflow/dags/ --delete
+          echo "DAGs uploaded successfully to S3"

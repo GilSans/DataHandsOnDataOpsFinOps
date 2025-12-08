@@ -1,0 +1,29 @@
+output "instance_id" {
+  description = "ID of the created EC2 instance"
+  value       = aws_instance.this.id
+}
+
+output "public_ip" {
+  description = "Public IP of the created EC2 instance"
+  value       = aws_instance.this.public_ip
+}
+
+output "private_ip" {
+  description = "Private IP of the created EC2 instance"
+  value       = aws_instance.this.private_ip
+}
+
+output "security_group_id" {
+  description = "ID of the created Security Group"
+  value       = aws_security_group.this.id
+}
+
+output "cloudwatch_log_group_name" {
+  description = "Name of the CloudWatch log group for Airflow"
+  value       = aws_cloudwatch_log_group.airflow_logs.name
+}
+
+output "instance_arn" {
+  description = "ARN of the EC2 instance"
+  value       = aws_instance.this.arn
+}
