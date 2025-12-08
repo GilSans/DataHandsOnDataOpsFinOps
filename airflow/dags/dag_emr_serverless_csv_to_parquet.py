@@ -35,6 +35,10 @@ def dag_emr_serverless_csv_to_parquet():
             "monitoringConfiguration": {
                 "s3MonitoringConfiguration": {
                     "logUri": f"s3://{S3_BUCKET}/logs/emr-serverless/"
+                },
+                "cloudWatchLoggingConfiguration": {
+                    "enabled": True,
+                    "logGroupName": "/aws/emr-serverless/data-handson-mds-spark-dev"
                 }
             }
         },

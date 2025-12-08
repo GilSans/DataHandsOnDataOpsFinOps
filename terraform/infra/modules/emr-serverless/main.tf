@@ -1,3 +1,8 @@
+resource "aws_cloudwatch_log_group" "emr_serverless" {
+  name              = "/aws/emr-serverless/${var.project_name}-spark-${var.environment}"
+  retention_in_days = 7
+}
+
 resource "aws_emrserverless_application" "spark_app" {
   name          = "${var.project_name}-spark-${var.environment}"
   release_label = var.release_label
@@ -77,7 +82,9 @@ resource "aws_iam_role_policy" "emr_serverless_s3_policy" {
         ]
         Resource = [
           "arn:aws:s3:::${var.s3_bucket}/*",
-          "arn:aws:s3:::${var.s3_bucket}"
+          "arn:aws:s3:::${var.s3_bucket}",
+          "arn:aws:s3:::${var.s3_bucket_logs}/*",
+          "arn:aws:s3:::${var.s3_bucket_logs}"
         ]
       },
       {
@@ -85,7 +92,9 @@ resource "aws_iam_role_policy" "emr_serverless_s3_policy" {
         Action = [
           "glue:GetDatabase",
           "glue:GetTable",
-          "glue:GetPartitions"
+          "glue:GetPartitions",
+          "glue:CreateTable",
+          "glue:UpdateTable"
         ]
         Resource = "*"
       },
@@ -100,4 +109,9 @@ resource "aws_iam_role_policy" "emr_serverless_s3_policy" {
       }
     ]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "emr_serverless_basic" {
+  role       = aws_iam_role.emr_serverless_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEMRServerlessBasicExecutionRole"
 }

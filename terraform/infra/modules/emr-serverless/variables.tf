@@ -15,6 +15,10 @@ variable "s3_bucket" {
   type = string
 }
 
+variable "s3_bucket_logs" {
+  type = string
+}
+
 variable "driver_cpu" {
   type    = string
   default = "2 vCPU"

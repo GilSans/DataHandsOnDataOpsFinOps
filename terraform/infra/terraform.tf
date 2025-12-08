@@ -14,12 +14,12 @@ provider "aws" {
   region = "us-east-2"
   default_tags {
     tags = {
-      "aws:servicecatalog:applicationName" = "data-handson-dataops-finops"
-      "Project"                            = "data-handson-mds"
-      "Environment"                        = var.environment
-      "Owner"                              = "DataOps Team"
-      "CostCenter"                         = "DataEngineering"
-      "ManagedBy"                          = "Terraform"
+      "Application" = "data-handson-dataops-finops"
+      "Project"     = "data-handson-mds"
+      "Environment" = var.environment
+      "Owner"       = "DataOps Team"
+      "CostCenter"  = "DataEngineering"
+      "ManagedBy"   = "Terraform"
     }
   }
 }

@@ -3,12 +3,12 @@ resource "aws_servicecatalogappregistry_application" "main" {
   description = var.description
 
   tags = {
-    "aws:servicecatalog:applicationName" = var.application_name
-    "Environment"                        = var.environment
-    "Project"                            = var.project_name
-    "Owner"                              = var.owner
-    "CostCenter"                         = var.cost_center
-    "Terraform"                          = "true"
+    "Application" = var.application_name
+    "Environment" = var.environment
+    "Project"     = var.project_name
+    "Owner"       = var.owner
+    "CostCenter"  = var.cost_center
+    "Terraform"   = "true"
   }
 }
 
@@ -25,7 +25,7 @@ resource "aws_servicecatalogappregistry_attribute_group" "main" {
   })
 
   tags = {
-    "aws:servicecatalog:applicationName" = var.application_name
+    "Application" = var.application_name
   }
 }
 

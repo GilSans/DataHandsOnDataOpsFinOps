@@ -498,9 +498,10 @@ module "lambda_airflow_health_check" {
 module "emr_serverless" {
   source = "./modules/emr-serverless"
 
-  project_name = "data-handson-mds"
-  environment  = var.environment
-  s3_bucket    = var.s3_bucket_raw
+  project_name   = "data-handson-mds"
+  environment    = var.environment
+  s3_bucket      = var.s3_bucket_raw
+  s3_bucket_logs = var.s3_bucket_scripts
 
   release_label = "emr-7.0.0"
 
