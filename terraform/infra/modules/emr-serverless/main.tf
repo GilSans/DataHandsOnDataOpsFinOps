@@ -110,8 +110,3 @@ resource "aws_iam_role_policy" "emr_serverless_s3_policy" {
     ]
   })
 }
-
-resource "aws_iam_role_policy_attachment" "emr_serverless_basic" {
-  role       = aws_iam_role.emr_serverless_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEMRServerlessBasicExecutionRole"
-}
